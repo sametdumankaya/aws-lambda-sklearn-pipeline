@@ -1,0 +1,12 @@
+{
+    "dev": {
+        "app_function": "api.app",
+        "aws_region": "eu-central-1",
+        "profile_name": "default",
+        "project_name": "textclassificat",
+        "runtime": "python3.6",
+        "s3_bucket": "zappa-8kn6hj19c",
+        "slim_handler": true,
+        "api_key_required": true
+    }
+}
