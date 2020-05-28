@@ -1,0 +1,4 @@
+flask
+boto3
+scikit-learn==0.19.1
+zappa
