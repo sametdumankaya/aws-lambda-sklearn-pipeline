@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Metin Sınıflandırma Aracı</title>
+
+  <!-- Bootstrap Core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom Fonts -->
+  <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+  <link href="vendor/simple-line-icons/css/simple-line-icons.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link href="css/stylish-portfolio.min.css" rel="stylesheet">
+
+</head>
+
+<body id="page-top">
+
+
+  <!-- Header -->
+  <header class="masthead d-flex">
+    <div class="container text-center my-auto">
+      <h1 class="mb-1">Metin Sınıflandırma Aracı</h1>
+      <h3 class="mb-5">
+        <em>Metinleri içeren dosyayı yükleyin</em>
+      </h3>
+        <input id="fileUpload" name="fileUpload" type="file" /> 
+        
+      <a class="btn btn-primary btn-xl" href="#about" id="submitBtn" name="submitBtn">Yükle</a>
+    </div>
+    <div class="overlay"></div>
+  </header>
+    
+  
+
+  <!-- Bootstrap core JavaScript -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Plugin JavaScript -->
+  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+
+  <!-- Custom scripts for this template -->
+  <script src="js/stylish-portfolio.min.js"></script>
+
+    <script>
+      $(document).ready(function(){
+          $("#submitBtn").click(function(){
+              var data = new FormData();
+              jQuery.each(jQuery('#fileUpload')[0].files, function(i, file) {
+                data.append('file', file);
+              });
+              
+              // Show full page LoadingOverlay
+              $.LoadingOverlay("show");
+              
+              jQuery.ajax({
+                url: 'http://0.0.0.0:8000/uploadfile/',
+                data: data,
+                cache: false,
+                contentType: false,
+                processData: false,
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                method: 'POST',
+                success: function(resp){
+                    $.LoadingOverlay("hide");
+                    var a = document.createElement('a');
+                    var url = window.URL.createObjectURL(resp);
+                    a.href = url;
+                    a.download = 'sınıflandırılmış metinler.zip';
+                    document.body.append(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                }
+            });
+          });
+          
+          
+        });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.7/dist/loadingoverlay.min.js"></script>
+</body>
+
+</html>

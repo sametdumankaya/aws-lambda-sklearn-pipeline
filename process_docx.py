@@ -4,16 +4,27 @@ import io
 import uuid
 import os
 import zipfile
+import re
+import nltk
 from docx import Document
 from shutil import make_archive, rmtree
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
-import re
-import nltk
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
 model_file = open("pipeline2.pkl", 'rb')
 model = pickle.load(model_file)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 WPT = nltk.WordPunctTokenizer()
 stop_word_list = nltk.corpus.stopwords.words('turkish')
