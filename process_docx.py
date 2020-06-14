@@ -79,6 +79,8 @@ async def train_documents(file: UploadFile = File(...)):
             text = preprocess_doc(text)
             text_list.append(text)
 
+            print("aaaaaa")
+
             category = file_name.split('/')[0]
             category_list.append(category)
 
