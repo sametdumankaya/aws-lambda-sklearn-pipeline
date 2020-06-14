@@ -65,10 +65,12 @@ def preprocess_doc(single_doc):
 async def train_documents(file: UploadFile = File(...)):
     start_time = time.time()
     contents = await file.read()
+    print("1")
 
     text_list = []
     category_list = []
     zf = zipfile.ZipFile(io.BytesIO(contents), "r")
+    print("2")
 
     for file_name in zf.namelist():
         if not file_name.endswith("/"):
@@ -80,15 +82,20 @@ async def train_documents(file: UploadFile = File(...)):
             category = file_name.split('/')[0]
             category_list.append(category)
 
+    print("3")
+
     x_train, x_test, y_train, y_test = train_test_split(text_list, category_list, test_size=0.2)
     svc = Pipeline([('vect', CountVectorizer()),
                     ('tfidf', TfidfTransformer()),
                     ('clf', LinearSVC())])
     svc.fit(x_train, y_train)
+
+    print("4")
     y_prediction = svc.predict(x_test)
     prediction_report = classification_report(y_test, y_prediction)
     trained_model_name = str(uuid.uuid4())
 
+    print("5")
     if not os.path.exists(models_folder_name):
         os.makedirs(models_folder_name)
     pickle.dump(svc, open(f"{models_folder_name}/{trained_model_name}.pkl", 'wb'))
