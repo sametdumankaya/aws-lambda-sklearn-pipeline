@@ -19,7 +19,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.metrics import classification_report
 
-
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -33,7 +32,11 @@ models_folder_name = 'models'
 results_folder_name = 'results'
 
 WPT = nltk.WordPunctTokenizer()
-stop_word_list = nltk.corpus.stopwords.words('turkish')
+stop_word_list = ['acaba', 'ama', 'aslında', 'az', 'bazı', 'belki', 'biri', 'birkaç', 'birşey', 'biz', 'bu', 'çok',
+                  'çünkü', 'da', 'daha', 'de', 'defa', 'diye', 'eğer', 'en', 'gibi', 'hem', 'hep', 'hepsi', 'her',
+                  'hiç', 'için', 'ile', 'ise', 'kez', 'ki', 'kim', 'mı', 'mu', 'mü', 'nasıl', 'ne', 'neden', 'nerde',
+                  'nerede', 'nereye', 'niçin', 'niye', 'o', 'sanki', 'şey', 'siz', 'şu', 'tüm', 've', 'veya', 'ya',
+                  'yani']
 
 
 def preprocess_doc(single_doc):
