@@ -1,16 +1,15 @@
 import pickle
 import uvicorn
 import io
-import uuid
 import os
 import zipfile
 import re
 import nltk
 import time
+import uuid
 from docx import Document
 from shutil import make_archive, rmtree
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
@@ -18,6 +17,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.metrics import classification_report
+
 
 app = FastAPI()
 app.add_middleware(
@@ -28,7 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-models_folder_name = 'models'
+models_folder_name = 'local_models'
 results_folder_name = 'results'
 
 WPT = nltk.WordPunctTokenizer()
@@ -64,14 +64,13 @@ def preprocess_doc(single_doc):
     return single_doc
 
 
-@app.post("/train_documents")
-async def train_documents(file: UploadFile = File(...)):
+@app.post("/train_documents_with_path/{path}")
+async def train_documents_with_path(path: str):
     start_time = time.time()
-    contents = await file.read()
 
     text_list = []
     category_list = []
-    zf = zipfile.ZipFile(io.BytesIO(contents), "r")
+    zf = zipfile.ZipFile(path, "r")
 
     for file_name in zf.namelist():
         if not file_name.endswith("/"):
@@ -90,25 +89,24 @@ async def train_documents(file: UploadFile = File(...)):
     svc.fit(x_train, y_train)
     y_prediction = svc.predict(x_test)
     prediction_report = classification_report(y_test, y_prediction)
-    trained_model_name = str(uuid.uuid4())
+    saved_model_file_name = f'{str(uuid.uuid4())}.pkl'
 
     if not os.path.exists(models_folder_name):
         os.makedirs(models_folder_name)
-    pickle.dump(svc, open(f"{models_folder_name}/{trained_model_name}.pkl", 'wb'))
+    pickle.dump(svc, open(f"{models_folder_name}/{saved_model_file_name}", 'wb'))
 
     return {
         "prediction_report": prediction_report,
         "elapsed_time": time.time() - start_time,
-        "model_name": trained_model_name
+        "trained_model_name": saved_model_file_name
     }
 
 
-@app.post("/organize_folders/{model_name}")
-async def organize_folders(model_name: str, file: UploadFile = File(...)):
-    model_file = open(f"{models_folder_name}/{model_name}.pkl", 'rb')
+@app.post("/organize_folders_with_path/{model_name}/{organize_folder_path}")
+async def organize_folders_with_path(model_name: str, organize_folder_path: str):
+    model_file = open(f"{models_folder_name}/{model_name}", 'rb')
     model = pickle.load(model_file)
 
-    contents = await file.read()
     results_file_name = str(uuid.uuid4())
 
     if not os.path.exists(results_folder_name):
@@ -116,7 +114,7 @@ async def organize_folders(model_name: str, file: UploadFile = File(...)):
 
     os.mkdir(f'{results_folder_name}/{results_file_name}')
 
-    zf = zipfile.ZipFile(io.BytesIO(contents), "r")
+    zf = zipfile.ZipFile(organize_folder_path, "r")
     for file_name in zf.namelist():
         doc = Document(io.BytesIO(zf.read(file_name)))
         text = ''.join([paragraph.text for paragraph in doc.paragraphs])
@@ -130,7 +128,9 @@ async def organize_folders(model_name: str, file: UploadFile = File(...)):
 
     make_archive(f'{results_folder_name}/{results_file_name}', "zip", f'{results_folder_name}/{results_file_name}')
     rmtree(f'{results_folder_name}/{results_file_name}', ignore_errors=True)
-    return FileResponse(path=f'{results_folder_name}/{results_file_name}.zip', filename=f'{results_file_name}.zip')
+    return {
+        "file_path": os.path.abspath(f'{results_folder_name}/{results_file_name}.zip')
+    }
 
 
 if __name__ == "__main__":
