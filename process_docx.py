@@ -7,6 +7,7 @@ import re
 import nltk
 import time
 import uuid
+import gc
 from docx import Document
 from shutil import make_archive, rmtree
 from fastapi import FastAPI
@@ -75,6 +76,7 @@ def preprocess_doc(single_doc):
     tokens = WPT.tokenize(single_doc)
     filtered_tokens = [token for token in tokens if token not in stop_word_list]
     single_doc = ' '.join(filtered_tokens)
+
     return single_doc
 
 
@@ -97,6 +99,11 @@ async def train_documents_with_path(params: TrainDocumentsModel):
             category_list.append(category)
 
     x_train, x_test, y_train, y_test = train_test_split(text_list, category_list, test_size=0.2)
+
+    del text_list
+    del category_list
+    gc.collect()
+
     svc = Pipeline([('vect', CountVectorizer()),
                     ('tfidf', TfidfTransformer()),
                     ('clf', LinearSVC())])
@@ -104,6 +111,12 @@ async def train_documents_with_path(params: TrainDocumentsModel):
     y_prediction = svc.predict(x_test)
     prediction_report = classification_report(y_test, y_prediction)
     saved_model_file_name = f'{str(uuid.uuid4())}.pkl'
+
+    del x_train
+    del x_test
+    del y_train
+    del y_test
+    gc.collect()
 
     if not os.path.exists(models_folder_name):
         os.makedirs(models_folder_name)
