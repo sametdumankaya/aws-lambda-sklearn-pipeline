@@ -11,12 +11,22 @@ from docx import Document
 from shutil import make_archive, rmtree
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.metrics import classification_report
+
+
+class TrainDocumentsModel(BaseModel):
+    path: str
+
+
+class OrganizeFoldersModel(BaseModel):
+    model_name: str
+    organize_folder_path: str
 
 
 app = FastAPI()
@@ -64,13 +74,13 @@ def preprocess_doc(single_doc):
     return single_doc
 
 
-@app.post("/train_documents_with_path/{path}")
-async def train_documents_with_path(path: str):
+@app.post("/train_documents_with_path/")
+async def train_documents_with_path(params: TrainDocumentsModel):
     start_time = time.time()
 
     text_list = []
     category_list = []
-    zf = zipfile.ZipFile(path, "r")
+    zf = zipfile.ZipFile(params.path, "r")
 
     for file_name in zf.namelist():
         if not file_name.endswith("/"):
@@ -102,9 +112,9 @@ async def train_documents_with_path(path: str):
     }
 
 
-@app.post("/organize_folders_with_path/{model_name}/{organize_folder_path}")
-async def organize_folders_with_path(model_name: str, organize_folder_path: str):
-    model_file = open(f"{models_folder_name}/{model_name}", 'rb')
+@app.post("/organize_folders_with_path/")
+async def organize_folders_with_path(params: OrganizeFoldersModel):
+    model_file = open(f"{models_folder_name}/{params.model_name}", 'rb')
     model = pickle.load(model_file)
 
     results_file_name = str(uuid.uuid4())
@@ -114,7 +124,7 @@ async def organize_folders_with_path(model_name: str, organize_folder_path: str)
 
     os.mkdir(f'{results_folder_name}/{results_file_name}')
 
-    zf = zipfile.ZipFile(organize_folder_path, "r")
+    zf = zipfile.ZipFile(params.organize_folder_path, "r")
     for file_name in zf.namelist():
         doc = Document(io.BytesIO(zf.read(file_name)))
         text = ''.join([paragraph.text for paragraph in doc.paragraphs])
