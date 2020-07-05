@@ -100,6 +100,7 @@ async def train_documents_with_path(params: TrainDocumentsModel):
 
     x_train, x_test, y_train, y_test = train_test_split(text_list, category_list, test_size=0.2)
 
+    del zf
     del text_list
     del category_list
     gc.collect()
