@@ -29,6 +29,10 @@ class OrganizeFoldersModel(BaseModel):
     organize_folder_path: str
 
 
+class DeleteModelModel(BaseModel):
+    model_id: str
+
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -140,6 +144,14 @@ async def organize_folders_with_path(params: OrganizeFoldersModel):
     rmtree(f'{results_folder_name}/{results_file_name}', ignore_errors=True)
     return {
         "file_path": os.path.abspath(f'{results_folder_name}/{results_file_name}.zip')
+    }
+
+
+@app.post("/delete_model_file/")
+async def delete_model_file(params: DeleteModelModel):
+    os.remove(f"{models_folder_name}/{params.model_id}")
+    return {
+        "result": True
     }
 
 
