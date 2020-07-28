@@ -1,6 +1,5 @@
 import pickle
 import uvicorn
-import io
 import os
 import zipfile
 import re
@@ -8,8 +7,8 @@ import nltk
 import time
 import uuid
 import gc
-from docx import Document
-from shutil import make_archive, rmtree
+import textract
+from shutil import make_archive, rmtree, move
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -45,6 +44,8 @@ app.add_middleware(
 
 models_folder_name = 'local_models'
 results_folder_name = 'results'
+temp_train_folder_name = 'tmp_train'
+temp_organize_folder_name = 'tmp_organize'
 
 WPT = nltk.WordPunctTokenizer()
 stop_word_list = ['acaba', 'ama', 'aslında', 'az', 'bazı', 'belki', 'biri', 'birkaç', 'birşey', 'biz', 'bu', 'çok',
@@ -86,21 +87,35 @@ async def train_documents_with_path(params: TrainDocumentsModel):
 
     text_list = []
     category_list = []
-    zf = zipfile.ZipFile(params.path, "r")
 
-    for file_name in zf.namelist():
-        if not file_name.endswith("/"):
-            doc = Document(io.BytesIO(zf.read(file_name)))
-            text = ''.join([paragraph.text for paragraph in doc.paragraphs])
-            text = preprocess_doc(text)
-            text_list.append(text)
+    random_folder_name = str(uuid.uuid4())
+    temp_extract_path = f'{temp_train_folder_name}/{random_folder_name}'
 
-            category = file_name.split('/')[0]
-            category_list.append(category)
+    if not os.path.exists(temp_extract_path):
+        os.makedirs(temp_extract_path)
+
+    with zipfile.ZipFile(params.path, 'r') as zip_ref:
+        zip_ref.extractall(temp_extract_path)
+
+    dirs = [a for a in os.listdir(temp_extract_path)]
+
+    for directory in dirs:
+        current_category_path = os.path.join(temp_extract_path, directory)
+        file_list = [os.path.join(current_category_path, x) for x in os.listdir(current_category_path) if
+                     os.path.isfile(os.path.join(current_category_path, x))]
+        for file_name in file_list:
+            if not file_name.endswith("/"):
+                text = textract.process(file_name).decode("utf-8")
+                text = preprocess_doc(text)
+                text_list.append(text)
+
+                category_list.append(directory)
+
+    rmtree(temp_extract_path, ignore_errors=True)
 
     x_train, x_test, y_train, y_test = train_test_split(text_list, category_list, test_size=0.2)
 
-    del zf
+    del file_list
     del text_list
     del category_list
     gc.collect()
@@ -142,20 +157,32 @@ async def organize_folders_with_path(params: OrganizeFoldersModel):
 
     os.mkdir(f'{results_folder_name}/{results_file_name}')
 
-    zf = zipfile.ZipFile(params.organize_folder_path, "r")
-    for file_name in zf.namelist():
-        doc = Document(io.BytesIO(zf.read(file_name)))
-        text = ''.join([paragraph.text for paragraph in doc.paragraphs])
+    random_folder_name = str(uuid.uuid4())
+    temp_extract_path = f'{temp_organize_folder_name}/{random_folder_name}'
+
+    if not os.path.exists(temp_extract_path):
+        os.makedirs(temp_extract_path)
+
+    with zipfile.ZipFile(params.organize_folder_path, 'r') as zip_ref:
+        zip_ref.extractall(temp_extract_path)
+
+    file_list = [os.path.join(temp_extract_path, x) for x in os.listdir(temp_extract_path) if
+                 os.path.isfile(os.path.join(temp_extract_path, x))]
+
+    for file_name in file_list:
+        text = textract.process(file_name).decode("utf-8")
         text = preprocess_doc(text)
         prediction = model.predict([text])[0].strip()
 
         if not os.path.exists(f'{results_folder_name}/{results_file_name}/{prediction}'):
             os.makedirs(f'{results_folder_name}/{results_file_name}/{prediction}')
 
-        doc.save(f'{results_folder_name}/{results_file_name}/{prediction}/{file_name}')
+        move(file_name, f'{results_folder_name}/{results_file_name}/{prediction}/{os.path.basename(file_name)}')
 
     make_archive(f'{results_folder_name}/{results_file_name}', "zip", f'{results_folder_name}/{results_file_name}')
     rmtree(f'{results_folder_name}/{results_file_name}', ignore_errors=True)
+    rmtree(temp_extract_path, ignore_errors=True)
+
     return {
         "file_path": os.path.abspath(f'{results_folder_name}/{results_file_name}.zip')
     }
