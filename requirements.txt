@@ -14,7 +14,7 @@ scipy==1.5.1
 starlette==0.13.4
 threadpoolctl==2.1.0
 tqdm==4.47.0
-uvicorn==0.11.5
+uvicorn==0.11.7
 uvloop==0.14.0
 websockets==8.1
 textract==1.6.3
