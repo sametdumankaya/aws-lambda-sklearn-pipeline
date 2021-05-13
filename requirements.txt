@@ -6,7 +6,7 @@ joblib==0.16.0
 lxml==4.5.1
 nltk==3.5
 numpy==1.19.0
-pydantic==1.5.1
+pydantic==1.6.2
 python-docx==0.8.10
 regex==2020.6.8
 scikit-learn==0.23.1
